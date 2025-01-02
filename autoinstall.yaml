@@ -1,0 +1,59 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: ingest_01
+    username: ingest
+    password: "ingest"  # Substitua pelo hash da senha gerado com `mkpasswd --method=SHA-512`
+  keyboard:
+    layout: us
+  locale: en_US
+  storage:
+    config:
+      - type: disk
+        id: disk0
+        ptable: msdos  # Define o esquema de particionamento como MBR
+        device: /dev/sda  # Altere se necessário para o disco correto
+        wipe: superblock-recursive
+        grub_device: true  # Instala o GRUB neste disco
+        partitions:
+          - type: partition
+            id: boot
+            size: 512M  # Partição para /boot
+            flag: boot  # Define o flag de boot para Legacy BIOS
+          - type: partition
+            id: swap
+            size: 2G  # Tamanho do swap (ajuste conforme necessário)
+          - type: partition
+            id: root
+            size: -1  # Resto do disco será usado para a raiz
+      - type: format
+        id: format-boot
+        device: boot
+        fstype: ext4
+        label: boot
+      - type: format
+        id: format-root
+        device: root
+        fstype: ext4
+        label: root
+      - type: format
+        id: format-swap
+        device: swap
+        fstype: swap
+      - type: mount
+        path: /
+        device: root
+        id: mount-root
+      - type: mount
+        path: /boot
+        device: boot
+        id: mount-boot
+  grub:
+    install_devices:
+      - /dev/sda  # Instala o GRUB no disco principal
+  user-data:
+    disable_root: false  # Permite login root
+  late-commands:
+    - curtin in-target --target=/target apt-get update
+    - curtin in-target --target=/target apt-get -y upgrade
